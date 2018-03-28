@@ -54,7 +54,61 @@ namespace HandleXls
                     }
                 }
             };
-            ReadXls("2.xls");
+            Action<string, Dictionary<string, List<BomInfo>>> SaveXls = (path, SaveInfo) =>
+            {
+                Workbook workbook = new Workbook();
+                int count = 0;
+                foreach (var BomItem in SaveInfo)
+                {
+                    var S1 = BomItem.Key.Split(new char[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+                    var S2 = S1[0].Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (S1.Length != 1)
+                    {
+
+                        var S3 = S1[1].Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                        Worksheet worksheet = new Worksheet("Sheet" + count.ToString());
+                        worksheet.Cells.ColumnWidth[(ushort)0] = 3200;
+                        worksheet.Cells.ColumnWidth[(ushort)1] = 10000;
+                        worksheet.Cells.ColumnWidth[(ushort)2] = 10000;
+                        worksheet.Cells[0, 0] = new Cell("元件组合");
+                        worksheet.Cells[1, 0] = new Cell(S2[0]);
+                        worksheet.Cells[1, 1] = new Cell(S2[1]);
+                        worksheet.Cells[2, 0] = new Cell(S3[0]);
+                        worksheet.Cells[2, 1] = new Cell(S3[1]);
+                        worksheet.Cells[3, 0] = new Cell("品号");
+                        worksheet.Cells[3, 1] = new Cell("品名");
+                        for (int i = 0; i < BomItem.Value.Count; i++)
+                        {
+                            worksheet.Cells[4 + i, 0] = new Cell(BomItem.Value[i].主件品号);
+                            worksheet.Cells[4 + i, 1] = new Cell(BomItem.Value[i].品名);
+                        }
+                        workbook.Worksheets.Add(worksheet);
+                    }
+                    else
+                    {
+                        Worksheet worksheet = new Worksheet("Sheet" + count.ToString());
+                        worksheet.Cells.ColumnWidth[(ushort)0] = 3200;
+                        worksheet.Cells.ColumnWidth[(ushort)1] = 3200;
+                        worksheet.Cells.ColumnWidth[(ushort)2] = 3200;
+                        worksheet.Cells[0, 0] = new Cell("元件组合");
+                        worksheet.Cells[1, 0] = new Cell(S2[0]);
+                        worksheet.Cells[1, 1] = new Cell(S2[1]);
+                        worksheet.Cells[2, 0] = new Cell("品号");
+                        worksheet.Cells[2, 1] = new Cell("品名");
+                        for (int i = 0; i < BomItem.Value.Count; i++)
+                        {
+                            worksheet.Cells[3 + i, 0] = new Cell(BomItem.Value[i].主件品号);
+                            worksheet.Cells[3 + i, 1] = new Cell(BomItem.Value[i].品名);
+                        }
+                        workbook.Worksheets.Add(worksheet);
+                    }
+                    count++;
+
+                }
+
+                workbook.Save(path);
+
+            };
             LoadXls.Click += delegate
             {
                 var OpenFile = new OpenFileDialog
@@ -70,12 +124,11 @@ namespace HandleXls
             };
             Handler.Click += delegate
             {
-                try
+                // try
                 {
                     int 元件品号序列 = -1;
                     int 品名序列 = -1;
                     int 主件品号序列 = -1;
-
                     var DataGrid = ShowTab.SelectedTab.Controls[0] as DataGridView;
                     for (int i = 0; i < DataGrid.ColumnCount; i++)
                     {
@@ -117,13 +170,23 @@ namespace HandleXls
                         }
                         else
                         {
-                            品名 += item.Cells[元件品号序列].Value + " |";
+                            品名 += item.Cells[元件品号序列].Value + "|" + item.Cells[品名序列].Value + "&";
                         }
                     }
+                    var SaveFile = new SaveFileDialog
+                    {
+                        Filter = " Excel文件 | *.xls",
+                        Title = "保存表格"
+                    };
+                    SaveFile.ShowDialog();
+                    if (!string.IsNullOrWhiteSpace(SaveFile.FileName))
+                    {
+                        SaveXls(SaveFile.FileName, SaveInfo);
+                    }
                 }
-                catch (Exception)
-                {
-                }
+                /*  catch (Exception)
+                  {
+                  }*/
             };
         }
     }
