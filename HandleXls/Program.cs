@@ -1,21 +1,15 @@
-﻿using ExcelDataReader;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
+﻿using System;
 
 namespace HandleXls
 {
-  
-    class Program
+    internal class Program
     {
         [STAThread]
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            Application.Run(new Form1());
-           
+            //Application.Run(new Form1());
+            var Form = new Form1();
+            Form.Show();
         }
     }
 }
