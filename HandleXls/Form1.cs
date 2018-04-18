@@ -84,9 +84,8 @@ namespace HandleXls
                     worksheet.Cells[0, 5] = new Cell("品号属性");
                     worksheet.Cells[0, 6] = new Cell("快捷码");
                     worksheet.Cells[0, 7] = new Cell("主要仓库");
-                    worksheet.Cells[0, 8] = new Cell("");
-                    worksheet.Cells[0, 9] = new Cell("会计");
-                    worksheet.Cells[0, 10] = new Cell("备注");
+                    worksheet.Cells[0, 8] = new Cell("会计");
+                    worksheet.Cells[0, 9] = new Cell("备注");
                 }
 
             /*    void 全部数据验证(Workbook book)
@@ -128,9 +127,8 @@ namespace HandleXls
                         worksheet.Cells[DicCount, 5] = new Cell(Sheets.Value[i][6].ToString()); //品号属性
                         worksheet.Cells[DicCount, 6] = new Cell(Sheets.Value[i][4].ToString()); //快捷码
                         worksheet.Cells[DicCount, 7] = new Cell(Sheets.Value[i][7].ToString()); //主要仓库
-                        worksheet.Cells[DicCount, 8] = new Cell(""); //不明留空
-                        worksheet.Cells[DicCount, 9] = new Cell(Sheets.Value[i][5].ToString()); //会计
-                        worksheet.Cells[DicCount, 10] = new Cell(""); //备注缺失
+                        worksheet.Cells[DicCount, 8] = new Cell(Sheets.Value[i][5].ToString()); //会计
+                        worksheet.Cells[DicCount, 9] = new Cell(""); //备注缺失
                     }
 
                     if (SheetsIndex == -1) workbook.Worksheets.Add(worksheet);
