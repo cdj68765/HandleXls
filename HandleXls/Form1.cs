@@ -38,31 +38,34 @@ namespace HandleXls
                             分类列表.Add(new 分类表(TempS, Row[1].ToString(), Row[2].ToString(), TempS2));
                         }
                 }
+
                 return 分类列表;
             }
 
-            Dictionary<string, List<object[]>> 读取并分析原始数据(string path = "品号信息20180417.xls")
+            Tuple<List<object>, Dictionary<string, List<object[]>>> 读取并分析原始数据(string path = "品号信息20180417.xls")
             {
-                var BomDic = new Dictionary<string, List<object[]>>();
+                Tuple<List<object>, Dictionary<string, List<object[]>>> Ret;
                 using (var reader = ExcelReaderFactory.CreateReader(File.Open(path, FileMode.Open)))
                 {
                     var Sheel = reader.AsDataSet().Tables[0].Rows;
+                    Ret = new Tuple<List<object>, Dictionary<string, List<object[]>>>(Sheel[0].ItemArray.ToList(),
+                        new Dictionary<string, List<object[]>>());
                     Sheel.RemoveAt(0);
                     foreach (DataRow Row in Sheel)
                     {
                         var 分类号 = Row[0].ToString().Split('-')[0];
-                        if (BomDic.ContainsKey(分类号))
-                            BomDic[分类号].Add(Row.ItemArray);
+                        if (Ret.Item2.ContainsKey(分类号))
+                            Ret.Item2[分类号].Add(Row.ItemArray);
                         else
-                            BomDic.Add(分类号, new List<object[]> { Row.ItemArray });
+                            Ret.Item2.Add(分类号, new List<object[]> {Row.ItemArray});
                         //Interlocked.Increment(ref AllCount);
                     }
                 }
 
-                return BomDic;
+                return Ret;
             }
 
-            void 导出处理后的数据(string path = @"save.xls")
+            void 导出处理后的数据()
             {
                 void InitSheet(ref Worksheet worksheet)
                 {
@@ -79,7 +82,8 @@ namespace HandleXls
                     worksheet.Cells.ColumnWidth[10] = 2000;
                     worksheet.Cells[0, 0] = new Cell("物料编码");
                     worksheet.Cells[1, 0] = new Cell("Id$");
-                    worksheet.Cells[0, 1] = new Cell("分类（系列号）"); worksheet.Cells[1, 1] = new Cell("classification$<name>");
+                    worksheet.Cells[0, 1] = new Cell("分类（系列号）");
+                    worksheet.Cells[1, 1] = new Cell("classification$<name>");
                     worksheet.Cells[0, 2] = new Cell("品名（按命名规则）");
                     worksheet.Cells[1, 2] = new Cell("name$");
                     worksheet.Cells[0, 3] = new Cell("规格（按命名规则）");
@@ -109,18 +113,48 @@ namespace HandleXls
 
                 var ClassifyList = 读取并分析分类表();
                 var WorkbookDic = new Dictionary<string, Workbook>();
-                OpenFileDialog OpenXls = new OpenFileDialog();
-                OpenXls.Filter = "Excel|*.xls";
+                var OpenXls = new OpenFileDialog();
+                OpenXls.Filter = @"Excel|*.xls";
                 OpenXls.ShowDialog();
                 if (!File.Exists(OpenXls.FileName)) return;
-                foreach (var Sheets in 读取并分析原始数据(OpenXls.FileName))
+                var OriData = 读取并分析原始数据(OpenXls.FileName);
+                var HeaderIndex = new int[10];
+                for (var i = 0; i < HeaderIndex.Length; i++)
+                    switch (i)
+                    {
+                        case 0:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "品号");
+                            break;
+                        case 1:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "品名");
+                            break;
+                        case 2:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "规格");
+                            break;
+                        case 3:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "单位");
+                            break;
+                        case 4:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "品号属性");
+                            break;
+                        case 6:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "主要仓库");
+                            break;
+                        case 7:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "会计");
+                            break;
+                        case 5:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "快捷码");
+                            break;
+                    }
+                foreach (var Sheets in OriData.Item2)
                 {
-                    Workbook workbook = null;
-                    Worksheet worksheet = null;
-                    bool Add = false;
+                    Workbook workbook;
+                    Worksheet worksheet;
+                    var Add = false;
                     var SheetName = (from Item in ClassifyList
-                                     where Sheets.Key.StartsWith(Item.分类号)
-                                     select Item).FirstOrDefault();
+                        where Sheets.Key.StartsWith(Item.分类号)
+                        select Item).FirstOrDefault();
                     if (string.IsNullOrWhiteSpace(SheetName.一级)) continue;
 
                     if (WorkbookDic.ContainsKey(SheetName.一级))
@@ -136,31 +170,30 @@ namespace HandleXls
                         InitSheet(ref worksheet);
                     }
 
-                    int DicCount = worksheet.Cells.Rows.Count;
+                    var DicCount = worksheet.Cells.Rows.Count;
                     for (var i = 0; i < Sheets.Value.Count; i++, DicCount++)
                     {
-                        worksheet.Cells[DicCount, 0] = new Cell(Sheets.Value[i][0].ToString()); //品号
+                        worksheet.Cells[DicCount, 0] = new Cell(Sheets.Value[i][HeaderIndex[0]].ToString()); //品号
                         worksheet.Cells[DicCount, 1] = new Cell(Sheets.Key); //系列号
-                        worksheet.Cells[DicCount, 2] = new Cell(Sheets.Value[i][1].ToString()); //品名
-                        worksheet.Cells[DicCount, 3] = new Cell(Sheets.Value[i][2].ToString()); //规格
-                        worksheet.Cells[DicCount, 4] = new Cell(Sheets.Value[i][3].ToString()); //库存单位
-                        worksheet.Cells[DicCount, 5] = new Cell(Sheets.Value[i][6].ToString()); //品号属性
-                        worksheet.Cells[DicCount, 6] = new Cell(Sheets.Value[i][4].ToString()); //快捷码
-                        worksheet.Cells[DicCount, 7] = new Cell(Sheets.Value[i][7].ToString()); //主要仓库
-                        worksheet.Cells[DicCount, 8] = new Cell(Sheets.Value[i][5].ToString()); //会计
+                        worksheet.Cells[DicCount, 2] = new Cell(Sheets.Value[i][HeaderIndex[1]].ToString()); //品名
+                        worksheet.Cells[DicCount, 3] = new Cell(Sheets.Value[i][HeaderIndex[2]].ToString()); //规格
+                        worksheet.Cells[DicCount, 4] = new Cell(Sheets.Value[i][HeaderIndex[3]].ToString()); //库存单位
+                        worksheet.Cells[DicCount, 5] = new Cell(Sheets.Value[i][HeaderIndex[4]].ToString()); //品号属性
+                        worksheet.Cells[DicCount, 6] = new Cell(Sheets.Value[i][HeaderIndex[5]].ToString()); //快捷码
+                        worksheet.Cells[DicCount, 7] = new Cell(Sheets.Value[i][HeaderIndex[6]].ToString()); //主要仓库
+                        worksheet.Cells[DicCount, 8] = new Cell(Sheets.Value[i][HeaderIndex[7]].ToString()); //会计
                         worksheet.Cells[DicCount, 9] = new Cell(""); //备注缺失
                         worksheet.Cells[DicCount, 10] = new Cell(@"L:\"); //文件夹
                     }
+
                     if (Add)
                     {
                         workbook.Worksheets.Add(worksheet);
                         WorkbookDic.Add(SheetName.一级, workbook);
                     }
                 }
-                foreach (var item in WorkbookDic)
-                {
-                    item.Value.Save($"{item.Key}.xls");
-                }
+
+                foreach (var item in WorkbookDic) item.Value.Save($"{item.Key}.xls");
                 //全部数据验证(workbook);
             }
 
@@ -201,11 +234,11 @@ namespace HandleXls
                 var count = 0;
                 foreach (var BomItem in SaveInfo)
                 {
-                    var S1 = BomItem.Key.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
-                    var S2 = S1[0].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                    var S1 = BomItem.Key.Split(new[] {'&'}, StringSplitOptions.RemoveEmptyEntries);
+                    var S2 = S1[0].Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
                     if (S1.Length != 1)
                     {
-                        var S3 = S1[1].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                        var S3 = S1[1].Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
                         var worksheet = new Worksheet("Sheet" + count);
                         worksheet.Cells.ColumnWidth[0] = 3200;
                         worksheet.Cells.ColumnWidth[1] = 10000;
@@ -295,7 +328,7 @@ namespace HandleXls
                                 if (SaveInfo.ContainsKey(品名))
                                     SaveInfo[品名].Add(TempBomInfo);
                                 else
-                                    SaveInfo.Add(品名, new List<BomInfo> { TempBomInfo });
+                                    SaveInfo.Add(品名, new List<BomInfo> {TempBomInfo});
 
                             TempBomInfo = new BomInfo
                             {
@@ -334,8 +367,8 @@ namespace HandleXls
         {
             internal string 二级;
             internal string 分类号;
-            internal string 一级;
             internal string 页名;
+            internal string 一级;
 
             public 分类表(string v1, string v2, string v3, string v4)
             {
