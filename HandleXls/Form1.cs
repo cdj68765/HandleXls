@@ -25,18 +25,19 @@ namespace HandleXls
                         FileShare.ReadWrite)))
                 {
                     var TempS = "";
+                    var TempS2 = "";
                     foreach (DataRow Row in reader.AsDataSet().Tables[0].Rows)
                         if (string.IsNullOrWhiteSpace(Row[0].ToString()))
                         {
-                            分类列表.Add(new 分类表(TempS, Row[1].ToString(), Row[2].ToString()));
+                            分类列表.Add(new 分类表(TempS, Row[1].ToString(), Row[2].ToString(), TempS2));
                         }
                         else
                         {
                             TempS = Row[0].ToString();
-                            分类列表.Add(new 分类表(Row[0].ToString(), Row[1].ToString(), Row[2].ToString()));
+                            TempS2 = Row[3].ToString();
+                            分类列表.Add(new 分类表(TempS, Row[1].ToString(), Row[2].ToString(), TempS2));
                         }
                 }
-
                 return 分类列表;
             }
 
@@ -53,7 +54,7 @@ namespace HandleXls
                         if (BomDic.ContainsKey(分类号))
                             BomDic[分类号].Add(Row.ItemArray);
                         else
-                            BomDic.Add(分类号, new List<object[]> {Row.ItemArray});
+                            BomDic.Add(分类号, new List<object[]> { Row.ItemArray });
                         //Interlocked.Increment(ref AllCount);
                     }
                 }
@@ -76,44 +77,63 @@ namespace HandleXls
                     worksheet.Cells.ColumnWidth[8] = 3200;
                     worksheet.Cells.ColumnWidth[9] = 2000;
                     worksheet.Cells.ColumnWidth[10] = 2000;
-                    worksheet.Cells[0, 0] = new Cell("品号");
-                    worksheet.Cells[0, 1] = new Cell("系列号");
-                    worksheet.Cells[0, 2] = new Cell("品名");
-                    worksheet.Cells[0, 3] = new Cell("规格");
-                    worksheet.Cells[0, 4] = new Cell("库存单位");
+                    worksheet.Cells[0, 0] = new Cell("物料编码");
+                    worksheet.Cells[1, 0] = new Cell("Id$");
+                    worksheet.Cells[0, 1] = new Cell("分类（系列号）"); worksheet.Cells[1, 1] = new Cell("classification$<name>");
+                    worksheet.Cells[0, 2] = new Cell("品名（按命名规则）");
+                    worksheet.Cells[1, 2] = new Cell("name$");
+                    worksheet.Cells[0, 3] = new Cell("规格（按命名规则）");
+                    worksheet.Cells[1, 3] = new Cell("Specification");
+                    worksheet.Cells[0, 4] = new Cell("单位");
+                    worksheet.Cells[1, 4] = new Cell("UOM<description>");
                     worksheet.Cells[0, 5] = new Cell("品号属性");
+                    worksheet.Cells[1, 5] = new Cell("SourceType<name>");
                     worksheet.Cells[0, 6] = new Cell("快捷码");
+                    worksheet.Cells[1, 6] = new Cell("KJM");
                     worksheet.Cells[0, 7] = new Cell("主要仓库");
-                    worksheet.Cells[0, 8] = new Cell("会计");
+                    worksheet.Cells[1, 7] = new Cell("ZYCK<name>");
+                    worksheet.Cells[0, 8] = new Cell("会计分类");
+                    worksheet.Cells[1, 8] = new Cell("KJFL<name>");
                     worksheet.Cells[0, 9] = new Cell("备注");
+                    worksheet.Cells[1, 9] = new Cell("Remark");
+                    worksheet.Cells[0, 10] = new Cell("文件夹(默认即可，不输入）");
+                    worksheet.Cells[1, 10] = new Cell("Folder");
                 }
 
-            /*    void 全部数据验证(Workbook book)
-                {
-                    var Count = 0;
-                    foreach (var Item in book.Worksheets) Count = Count + Item.Cells.Rows.Count - 1;
-                    Console.WriteLine();
-                }*/
+                /*    void 全部数据验证(Workbook book)
+                    {
+                        var Count = 0;
+                        foreach (var Item in book.Worksheets) Count = Count + Item.Cells.Rows.Count - 1;
+                        Console.WriteLine();
+                    }*/
 
                 var ClassifyList = 读取并分析分类表();
-                var workbook = new Workbook();
-                foreach (var Sheets in 读取并分析原始数据())
+                var WorkbookDic = new Dictionary<string, Workbook>();
+                OpenFileDialog OpenXls = new OpenFileDialog();
+                OpenXls.Filter = "Excel|*.xls";
+                OpenXls.ShowDialog();
+                if (!File.Exists(OpenXls.FileName)) return;
+                foreach (var Sheets in 读取并分析原始数据(OpenXls.FileName))
                 {
+                    Workbook workbook = null;
+                    Worksheet worksheet = null;
+                    bool Add = false;
                     var SheetName = (from Item in ClassifyList
-                        where Sheets.Key.StartsWith(Item.分类号)
-                        select Item.一级).FirstOrDefault();
-                    if (string.IsNullOrWhiteSpace(SheetName)) SheetName = "未找到";
+                                     where Sheets.Key.StartsWith(Item.分类号)
+                                     select Item).FirstOrDefault();
+                    if (string.IsNullOrWhiteSpace(SheetName.一级)) continue;
 
-                    var SheetsIndex = workbook.Worksheets.FindLastIndex(x => x.Name == SheetName);
-                    Worksheet worksheet;
-                    if (SheetsIndex == -1)
+                    if (WorkbookDic.ContainsKey(SheetName.一级))
                     {
-                        worksheet = new Worksheet(SheetName);
-                        InitSheet(ref worksheet);
+                        workbook = WorkbookDic[SheetName.一级];
+                        worksheet = workbook.Worksheets[0];
                     }
                     else
                     {
-                        worksheet = workbook.Worksheets[SheetsIndex];
+                        Add = true;
+                        workbook = new Workbook();
+                        worksheet = new Worksheet(SheetName.页名);
+                        InitSheet(ref worksheet);
                     }
 
                     int DicCount = worksheet.Cells.Rows.Count;
@@ -129,13 +149,19 @@ namespace HandleXls
                         worksheet.Cells[DicCount, 7] = new Cell(Sheets.Value[i][7].ToString()); //主要仓库
                         worksheet.Cells[DicCount, 8] = new Cell(Sheets.Value[i][5].ToString()); //会计
                         worksheet.Cells[DicCount, 9] = new Cell(""); //备注缺失
+                        worksheet.Cells[DicCount, 10] = new Cell(@"L:\"); //文件夹
                     }
-
-                    if (SheetsIndex == -1) workbook.Worksheets.Add(worksheet);
+                    if (Add)
+                    {
+                        workbook.Worksheets.Add(worksheet);
+                        WorkbookDic.Add(SheetName.一级, workbook);
+                    }
                 }
-
+                foreach (var item in WorkbookDic)
+                {
+                    item.Value.Save($"{item.Key}.xls");
+                }
                 //全部数据验证(workbook);
-                workbook.Save(path);
             }
 
             void ReadXls(string path)
@@ -175,11 +201,11 @@ namespace HandleXls
                 var count = 0;
                 foreach (var BomItem in SaveInfo)
                 {
-                    var S1 = BomItem.Key.Split(new[] {'&'}, StringSplitOptions.RemoveEmptyEntries);
-                    var S2 = S1[0].Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
+                    var S1 = BomItem.Key.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+                    var S2 = S1[0].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
                     if (S1.Length != 1)
                     {
-                        var S3 = S1[1].Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
+                        var S3 = S1[1].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
                         var worksheet = new Worksheet("Sheet" + count);
                         worksheet.Cells.ColumnWidth[0] = 3200;
                         worksheet.Cells.ColumnWidth[1] = 10000;
@@ -249,9 +275,11 @@ namespace HandleXls
                             case "元件品号":
                                 元件品号序列 = i;
                                 break;
+
                             case "品    名":
                                 品名序列 = i;
                                 break;
+
                             case "主件品号":
                                 主件品号序列 = i;
                                 break;
@@ -267,7 +295,7 @@ namespace HandleXls
                                 if (SaveInfo.ContainsKey(品名))
                                     SaveInfo[品名].Add(TempBomInfo);
                                 else
-                                    SaveInfo.Add(品名, new List<BomInfo> {TempBomInfo});
+                                    SaveInfo.Add(品名, new List<BomInfo> { TempBomInfo });
 
                             TempBomInfo = new BomInfo
                             {
@@ -307,12 +335,14 @@ namespace HandleXls
             internal string 二级;
             internal string 分类号;
             internal string 一级;
+            internal string 页名;
 
-            public 分类表(string v1, string v2, string v3)
+            public 分类表(string v1, string v2, string v3, string v4)
             {
                 一级 = v1;
                 二级 = v2;
                 分类号 = v3;
+                页名 = v4;
             }
         }
     }
