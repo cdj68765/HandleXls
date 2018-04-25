@@ -51,13 +51,14 @@ namespace HandleXls
                     Ret = new Tuple<List<object>, Dictionary<string, List<object[]>>>(Sheel[0].ItemArray.ToList(),
                         new Dictionary<string, List<object[]>>());
                     Sheel.RemoveAt(0);
+                    var 分类号Index = Ret.Item1.FindIndex(x => x.ToString() == "品号");
                     foreach (DataRow Row in Sheel)
                     {
-                        var 分类号 = Row[0].ToString().Split('-')[0];
+                        var 分类号 = Row[分类号Index].ToString().Split('-')[0];
                         if (Ret.Item2.ContainsKey(分类号))
                             Ret.Item2[分类号].Add(Row.ItemArray);
                         else
-                            Ret.Item2.Add(分类号, new List<object[]> {Row.ItemArray});
+                            Ret.Item2.Add(分类号, new List<object[]> { Row.ItemArray });
                         //Interlocked.Increment(ref AllCount);
                     }
                 }
@@ -125,26 +126,37 @@ namespace HandleXls
                         case 0:
                             HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "品号");
                             break;
+
                         case 1:
                             HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "品名");
                             break;
+
                         case 2:
                             HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "规格");
                             break;
+
                         case 3:
                             HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "单位");
                             break;
+
                         case 4:
                             HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "品号属性");
                             break;
+
+                        case 5:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "快捷码");
+                            break;
+
                         case 6:
                             HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "主要仓库");
                             break;
+
                         case 7:
                             HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "会计");
                             break;
-                        case 5:
-                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "快捷码");
+
+                        case 8:
+                            HeaderIndex[i] = OriData.Item1.FindIndex(x => x.ToString() == "备注");
                             break;
                     }
                 foreach (var Sheets in OriData.Item2)
@@ -153,10 +165,15 @@ namespace HandleXls
                     Worksheet worksheet;
                     var Add = false;
                     var SheetName = (from Item in ClassifyList
-                        where Sheets.Key.StartsWith(Item.分类号)
-                        select Item).FirstOrDefault();
-                    if (string.IsNullOrWhiteSpace(SheetName.一级)) continue;
+                                     where Sheets.Key.StartsWith(Item.分类号)
+                                     select Item).FirstOrDefault();
 
+                    if (string.IsNullOrWhiteSpace(SheetName.一级))
+                        continue;
+                    if (SheetName.一级 == "未知分类")
+                    {
+                        // continue;
+                    }
                     if (WorkbookDic.ContainsKey(SheetName.一级))
                     {
                         workbook = WorkbookDic[SheetName.一级];
@@ -182,7 +199,7 @@ namespace HandleXls
                         worksheet.Cells[DicCount, 6] = new Cell(Sheets.Value[i][HeaderIndex[5]].ToString()); //快捷码
                         worksheet.Cells[DicCount, 7] = new Cell(Sheets.Value[i][HeaderIndex[6]].ToString()); //主要仓库
                         worksheet.Cells[DicCount, 8] = new Cell(Sheets.Value[i][HeaderIndex[7]].ToString()); //会计
-                        worksheet.Cells[DicCount, 9] = new Cell(""); //备注缺失
+                        worksheet.Cells[DicCount, 9] = new Cell(HeaderIndex[8] == -1 ? "" : Sheets.Value[i][HeaderIndex[8]].ToString()); //备注缺失
                         worksheet.Cells[DicCount, 10] = new Cell(@"L:\"); //文件夹
                     }
 
@@ -234,11 +251,11 @@ namespace HandleXls
                 var count = 0;
                 foreach (var BomItem in SaveInfo)
                 {
-                    var S1 = BomItem.Key.Split(new[] {'&'}, StringSplitOptions.RemoveEmptyEntries);
-                    var S2 = S1[0].Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
+                    var S1 = BomItem.Key.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+                    var S2 = S1[0].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
                     if (S1.Length != 1)
                     {
-                        var S3 = S1[1].Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
+                        var S3 = S1[1].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
                         var worksheet = new Worksheet("Sheet" + count);
                         worksheet.Cells.ColumnWidth[0] = 3200;
                         worksheet.Cells.ColumnWidth[1] = 10000;
@@ -328,7 +345,7 @@ namespace HandleXls
                                 if (SaveInfo.ContainsKey(品名))
                                     SaveInfo[品名].Add(TempBomInfo);
                                 else
-                                    SaveInfo.Add(品名, new List<BomInfo> {TempBomInfo});
+                                    SaveInfo.Add(品名, new List<BomInfo> { TempBomInfo });
 
                             TempBomInfo = new BomInfo
                             {
