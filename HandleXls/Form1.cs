@@ -6,6 +6,8 @@ using System.Linq;
 using System.Windows.Forms;
 using ExcelDataReader;
 using ExcelLibrary.SpreadSheet;
+using NPOI.HSSF.UserModel;
+using NPOI.XSSF.UserModel;
 
 namespace HandleXls
 {
@@ -114,6 +116,7 @@ namespace HandleXls
 
                 var ClassifyList = 读取并分析分类表();
                 var WorkbookDic = new Dictionary<string, Workbook>();
+                var WorkbookDic2 = new Dictionary<string, XSSFWorkbook>();
                 var OpenXls = new OpenFileDialog();
                 OpenXls.Filter = @"Excel|*.xls";
                 OpenXls.ShowDialog();
@@ -163,6 +166,9 @@ namespace HandleXls
                 {
                     Workbook workbook;
                     Worksheet worksheet;
+
+                    XSSFWorkbook XLSXbook;
+                    XSSFSheet XLSXSheet;
                     var Add = false;
                     var SheetName = (from Item in ClassifyList
                                      where Sheets.Key.StartsWith(Item.分类号)
@@ -170,13 +176,16 @@ namespace HandleXls
 
                     if (string.IsNullOrWhiteSpace(SheetName.一级))
                         continue;
-                    if (SheetName.一级 == "未知分类")
+                    if (SheetName.一级 != "未知分类")
                     {
-                        // continue;
+                        //continue;
                     }
                     if (WorkbookDic.ContainsKey(SheetName.一级))
                     {
                         workbook = WorkbookDic[SheetName.一级];
+                        worksheet = workbook.Worksheets[0];
+
+                        XLSXbook = WorkbookDic2[SheetName.一级];
                         worksheet = workbook.Worksheets[0];
                     }
                     else
@@ -185,6 +194,10 @@ namespace HandleXls
                         workbook = new Workbook();
                         worksheet = new Worksheet(SheetName.页名);
                         InitSheet(ref worksheet);
+
+                        XLSXbook = new XSSFWorkbook();
+                        XLSXbook.CreateSheet(SheetName.页名);
+                        XLSXSheet = XLSXbook.GetSheetAt(0) as XSSFSheet;
                     }
 
                     var DicCount = worksheet.Cells.Rows.Count;
@@ -210,7 +223,7 @@ namespace HandleXls
                     }
                 }
 
-                foreach (var item in WorkbookDic) item.Value.Save($"{item.Key}.xls");
+                //  foreach (var item in WorkbookDic) item.Value.Save($"{item.Key}.xls");
                 //全部数据验证(workbook);
             }
 
