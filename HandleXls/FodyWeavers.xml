@@ -6,6 +6,10 @@ ExcelDataReader.DataSet
 ExcelDataReader
 ExcelLibrary
 ICSharpCode.SharpZipLib
+NPOI
+NPOI.OOXML
+NPOI.OpenXml4Net
+NPOI.OpenXmlFormats
 </IncludeAssemblies>
  </Costura>
 </Weavers>
