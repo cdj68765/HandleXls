@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using ExcelDataReader;
 using ExcelLibrary.SpreadSheet;
+using NPOI.HSSF.UserModel;
 using NPOI.XSSF.UserModel;
 
 namespace HandleXls
@@ -59,7 +60,7 @@ namespace HandleXls
                         if (Ret.Item2.ContainsKey(分类号))
                             Ret.Item2[分类号].Add(Row.ItemArray);
                         else
-                            Ret.Item2.Add(分类号, new List<object[]> {Row.ItemArray});
+                            Ret.Item2.Add(分类号, new List<object[]> { Row.ItemArray });
                         //Interlocked.Increment(ref AllCount);
                     }
                 }
@@ -77,9 +78,9 @@ namespace HandleXls
                     }*/
 
                 var ClassifyList = 读取并分析分类表();
-                var WorkbookDic = new Dictionary<string, XSSFWorkbook>();
+                var WorkbookDic = new Dictionary<string, HSSFWorkbook>();
                 var WorkbookIndex = new Dictionary<string, int>();
-                var OpenXls = new OpenFileDialog {Filter = @"Excel|*.xls"};
+                var OpenXls = new OpenFileDialog { Filter = @"Excel|*.xls" };
                 OpenXls.ShowDialog();
                 if (!File.Exists(OpenXls.FileName)) return;
                 var OriData = 读取并分析原始数据(OpenXls.FileName);
@@ -125,12 +126,12 @@ namespace HandleXls
                     }
                 foreach (var Sheets in OriData.Item2)
                 {
-                    XSSFWorkbook XLSXbook;
-                    XSSFSheet XLSXSheet;
+                    HSSFWorkbook XLSXbook;
+                    HSSFSheet XLSXSheet;
                     var Add = false;
                     var SheetName = (from Item in ClassifyList
-                        where Sheets.Key.StartsWith(Item.分类号)
-                        select Item).FirstOrDefault();
+                                     where Sheets.Key.StartsWith(Item.分类号)
+                                     select Item).FirstOrDefault();
 
                     if (string.IsNullOrWhiteSpace(SheetName.一级))
                         continue;
@@ -139,16 +140,16 @@ namespace HandleXls
                     {
                         XLSXbook = WorkbookDic[SheetName.一级];
                         DicCount = WorkbookIndex[SheetName.一级];
-                        XLSXSheet = XLSXbook.GetSheetAt(0) as XSSFSheet;
+                        XLSXSheet = XLSXbook.GetSheetAt(0) as HSSFSheet;
                     }
                     else
                     {
                         Add = true;
-                        XLSXbook = new XSSFWorkbook();
+                        XLSXbook = new HSSFWorkbook();
                         XLSXbook.CreateSheet(SheetName.页名);
-                        XLSXSheet = XLSXbook.GetSheetAt(0) as XSSFSheet;
+                        XLSXSheet = XLSXbook.GetSheetAt(0) as HSSFSheet;
                         InitXSheet();
-                        DicCount = 1;
+                        DicCount = 2;
 
                         void InitXSheet()
                         {
@@ -186,6 +187,16 @@ namespace HandleXls
                             row2.CreateCell(9).SetCellValue("Remark");
                             row1.CreateCell(10).SetCellValue("文件夹(默认即可，不输入）");
                             row2.CreateCell(10).SetCellValue("Folder");
+                            row1.CreateCell(11).SetCellValue("版本号");
+                            row2.CreateCell(11).SetCellValue("revisionid$");
+                            row1.CreateCell(12).SetCellValue("所有组的编号");
+                            row2.CreateCell(12).SetCellValue("OwnerGroup$");
+                            row1.CreateCell(13).SetCellValue("所有组的编号");
+                            row2.CreateCell(13).SetCellValue("OwnerGroup$");
+                            row1.CreateCell(14).SetCellValue("状态");
+                            row2.CreateCell(14).SetCellValue("STATUS$");
+                            row1.CreateCell(15).SetCellValue("生命周期");
+                            row2.CreateCell(15).SetCellValue("LIFECYCLEPHASE$");
                         }
                     }
 
@@ -193,7 +204,16 @@ namespace HandleXls
                     {
                         var row1 = XLSXSheet.CreateRow(DicCount);
                         row1.CreateCell(0).SetCellValue(Sheets.Value[i][HeaderIndex[0]].ToString());
-                        row1.CreateCell(1).SetCellValue(Sheets.Key);
+                        string TempK = Sheets.Key;
+                        if (TempK.Length == 5)
+                        {
+                            var t = TempK.Remove(0, 1);
+                            row1.CreateCell(1).SetCellValue(TempK.Remove(0, 1));
+                        }
+                        else
+                        {
+                            row1.CreateCell(1).SetCellValue(TempK);
+                        }
                         row1.CreateCell(2).SetCellValue(Sheets.Value[i][HeaderIndex[1]].ToString());
                         row1.CreateCell(3).SetCellValue(Sheets.Value[i][HeaderIndex[2]].ToString());
                         row1.CreateCell(4).SetCellValue(Sheets.Value[i][HeaderIndex[3]].ToString());
@@ -204,6 +224,11 @@ namespace HandleXls
                         row1.CreateCell(9)
                             .SetCellValue(HeaderIndex[8] == -1 ? "" : Sheets.Value[i][HeaderIndex[8]].ToString());
                         row1.CreateCell(10).SetCellValue(@"L:\");
+                        row1.CreateCell(11).SetCellValue(@"");
+                        row1.CreateCell(12).SetCellValue(@"");
+                        row1.CreateCell(13).SetCellValue(@"");
+                        row1.CreateCell(14).SetCellValue(@"WIP");
+                        row1.CreateCell(15).SetCellValue(@"Working");
                     }
 
                     if (Add)
@@ -218,7 +243,7 @@ namespace HandleXls
                 }
 
                 foreach (var VARIABLE in WorkbookDic)
-                    using (var File = new FileStream($"{VARIABLE.Key}.xlsx", FileMode.Create))
+                    using (var File = new FileStream($"{VARIABLE.Key}.xls", FileMode.Create))
                     {
                         VARIABLE.Value.Write(File);
                     }
@@ -263,11 +288,11 @@ namespace HandleXls
                 var count = 0;
                 foreach (var BomItem in SaveInfo)
                 {
-                    var S1 = BomItem.Key.Split(new[] {'&'}, StringSplitOptions.RemoveEmptyEntries);
-                    var S2 = S1[0].Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
+                    var S1 = BomItem.Key.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+                    var S2 = S1[0].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
                     if (S1.Length != 1)
                     {
-                        var S3 = S1[1].Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
+                        var S3 = S1[1].Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
                         var worksheet = new Worksheet("Sheet" + count);
                         worksheet.Cells.ColumnWidth[0] = 3200;
                         worksheet.Cells.ColumnWidth[1] = 10000;
@@ -357,7 +382,7 @@ namespace HandleXls
                                 if (SaveInfo.ContainsKey(品名))
                                     SaveInfo[品名].Add(TempBomInfo);
                                 else
-                                    SaveInfo.Add(品名, new List<BomInfo> {TempBomInfo});
+                                    SaveInfo.Add(品名, new List<BomInfo> { TempBomInfo });
 
                             TempBomInfo = new BomInfo
                             {
