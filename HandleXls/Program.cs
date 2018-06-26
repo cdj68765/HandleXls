@@ -16,12 +16,12 @@ namespace HandleXls
         private static void Main(string[] args)
         {
             //Application.Run(new Form1());
-            /*   var Form = new Form1();
-               Form.Show();*/
-            new Run();
+            var Form = new Form1();
+            Form.Show();
+            // new Run();
         }
 
-        class Run
+        private class Run
         {
             internal class BomInfo
             {
@@ -43,7 +43,6 @@ namespace HandleXls
                         ExcelReaderFactory.CreateReader(new FileStream(path, FileMode.Open, FileAccess.Read,
                             FileShare.ReadWrite)))
                     {
-
                         DataTable Dat = reader.AsDataSet().Tables[0];
                         Dat.Rows.RemoveAt(0);
                         BomInfo Temp = null;
@@ -52,19 +51,19 @@ namespace HandleXls
                             var Temp1 = new BomInfo();
                             switch (Date[0].ToString())
                             {
-
                                 case "0":
-                                {
-                                    if (Temp != null)
                                     {
-                                        AddNew.Add(Temp);
-                                    }
+                                        if (Temp != null)
+                                        {
+                                            AddNew.Add(Temp);
+                                        }
 
-                                    Temp = new BomInfo();
-                                    Temp.品号 = Date[22].ToString();
-                                    Temp.品名 = Date[3].ToString();
-                                }
+                                        Temp = new BomInfo();
+                                        Temp.品号 = Date[22].ToString();
+                                        Temp.品名 = Date[3].ToString();
+                                    }
                                     break;
+
                                 case ".1":
 
                                     Temp1.阶级 = Date[0].ToString();
@@ -73,6 +72,7 @@ namespace HandleXls
                                     Temp1.规格 = Date[4].ToString();
                                     Temp.阶级下属.Add(Temp1);
                                     break;
+
                                 case "..2":
                                     Temp1.阶级 = Date[0].ToString();
                                     Temp1.品号 = Date[1].ToString();
@@ -80,6 +80,7 @@ namespace HandleXls
                                     Temp1.规格 = Date[4].ToString();
                                     Temp.阶级下属.Last().阶级下属.Add(Temp1);
                                     break;
+
                                 case "...3":
                                     Temp1.阶级 = Date[0].ToString();
                                     Temp1.品号 = Date[1].ToString();
@@ -99,24 +100,22 @@ namespace HandleXls
                 var Cov6List = new Dictionary<string, BomInfo>();
                 var Add3 = new Dictionary<string, List<BomInfo>>();
                 var Cov3 = new Dictionary<string, List<BomInfo>>();
-                var 常开List=new  Dictionary<string, BomInfo>();
+                var 常开List = new Dictionary<string, BomInfo>();
                 var OFS = new List<BomInfo>();
                 var Other = new List<BomInfo>();
 
                 void Classify()
                 {
-
                     //先得到加工件
                     AddNew.ForEach(T1 =>
                     {
-
                         var 加工件 = T1.阶级下属.Find(X => X.品名.IndexOf("加工件", StringComparison.Ordinal) != -1);
                         if (加工件 != null)
                         {
                             Bomp.Add(T1.品号, T1);
                             var 银点 = (from T in 加工件.阶级下属
-                                where T.品名.IndexOf("银点铆压件FA7-10A 接线柱", StringComparison.Ordinal) != -1
-                                select T.品号).FirstOrDefault();
+                                      where T.品名.IndexOf("银点铆压件FA7-10A 接线柱", StringComparison.Ordinal) != -1
+                                      select T.品号).FirstOrDefault();
 
                             if (银点 != null && !_job.ContainsKey(银点))
                             {
@@ -134,8 +133,8 @@ namespace HandleXls
                             {
                                 //整理思路，检索银点加工件规格，如果检索到就添加，开始操作、
                                 var 银点 = (from T in T1.阶级下属
-                                    where T.品名.IndexOf("银点铆压件FA7-10A 接线柱", StringComparison.Ordinal) != -1
-                                    select T).FirstOrDefault();
+                                          where T.品名.IndexOf("银点铆压件FA7-10A 接线柱", StringComparison.Ordinal) != -1
+                                          select T).FirstOrDefault();
                                 if (银点 != null)
                                 {
                                     //寻找加工件
@@ -147,7 +146,7 @@ namespace HandleXls
                                         }
                                         else
                                         {
-                                            Add6.Add(银点.品号, new List<BomInfo>() {T1});
+                                            Add6.Add(银点.品号, new List<BomInfo>() { T1 });
                                         }
                                     }
                                     else
@@ -158,7 +157,7 @@ namespace HandleXls
                                         }
                                         else
                                         {
-                                            Cov6.Add(银点.品号, new List<BomInfo>() {T1});
+                                            Cov6.Add(银点.品号, new List<BomInfo>() { T1 });
                                             Cov6List.Add(银点.品号, 银点);
                                         }
                                     }
@@ -167,8 +166,8 @@ namespace HandleXls
                             else if (三号基座 != null)
                             {
                                 var 常闭 = (from T in T1.阶级下属
-                                    where T.品名.IndexOf("银点铆压件FA7-10A 常闭", StringComparison.Ordinal) != -1
-                                    select T.品号).FirstOrDefault();
+                                          where T.品名.IndexOf("银点铆压件FA7-10A 常闭", StringComparison.Ordinal) != -1
+                                          select T.品号).FirstOrDefault();
                                 if (常闭 != null)
                                 {
                                     OFS.Add(T1);
@@ -176,8 +175,8 @@ namespace HandleXls
                                 else
                                 {
                                     var 常开 = (from T in T1.阶级下属
-                                        where T.品名.IndexOf("银点铆压件FA7-10A 常开", StringComparison.Ordinal) != -1
-                                        select T).FirstOrDefault();
+                                              where T.品名.IndexOf("银点铆压件FA7-10A 常开", StringComparison.Ordinal) != -1
+                                              select T).FirstOrDefault();
                                     if (常开 != null)
                                     {
                                         //寻找加工件
@@ -189,7 +188,7 @@ namespace HandleXls
                                             }
                                             else
                                             {
-                                                Add3.Add(常开.品号, new List<BomInfo>() {T1});
+                                                Add3.Add(常开.品号, new List<BomInfo>() { T1 });
                                             }
                                         }
                                         else
@@ -200,14 +199,13 @@ namespace HandleXls
                                             }
                                             else
                                             {
-                                                Cov3.Add(常开.品号, new List<BomInfo>() {T1});
+                                                Cov3.Add(常开.品号, new List<BomInfo>() { T1 });
                                                 常开List.Add(常开.品号, 常开);
                                             }
                                         }
                                     }
                                 }
                             }
-
                             else
                             {
                                 Other.Add(T1);
@@ -251,7 +249,7 @@ namespace HandleXls
                             row1 = 替换.CreateRow(++h);
                             row1.CreateCell(1).SetCellValue("删除以下料件");
                             ++h;
-                            for (int j = 0; j < _job[bomp[i]].阶级下属.Count; j++,h++)
+                            for (int j = 0; j < _job[bomp[i]].阶级下属.Count; j++, h++)
                             {
                                 row1 = 替换.CreateRow(h);
                                 row1.CreateCell(0).SetCellValue(_job[bomp[i]].阶级下属[j].品号);
@@ -267,7 +265,7 @@ namespace HandleXls
                             row1 = 替换.CreateRow(++h);
                             row1.CreateCell(1).SetCellValue("需要处理的开关品号");
                             ++h;
-                            for (int j = 0; j < Add6[bomp[i]].Count; j++,h++)
+                            for (int j = 0; j < Add6[bomp[i]].Count; j++, h++)
                             {
                                 row1 = 替换.CreateRow(h);
                                 row1.CreateCell(0).SetCellValue(Add6[bomp[i]][j].品号);
@@ -363,7 +361,6 @@ namespace HandleXls
                     {
                         XLSXbook.Write(File);
                     }
-
                 }
 
                 ReadXls("FA7-10A 改自动化.xls");
